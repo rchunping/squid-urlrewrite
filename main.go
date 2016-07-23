@@ -173,11 +173,9 @@ scanloop:
 		case err := <-scan_err:
 			if err != nil {
 				log.Printf("reading stdin error: %s", err.Error())
-			} else {
-				//正常结束
-				log.Printf("exit.")
-				os.Exit(0)
 			}
+			log.Printf("exit.")
+			os.Exit(0)
 			break scanloop
 		case <-signal_hup_chan:
 			log.Printf("got SIGHUP to reload configure.")
@@ -226,6 +224,7 @@ func main() {
 		"/etc/squid-urlrewrite.conf",
 	}
 
+	// catch SIGHUP to reload configure
 	signal.Notify(signal_hup_chan, syscall.SIGHUP)
 
 	go WriterResponseLines()
