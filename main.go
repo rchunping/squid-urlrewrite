@@ -134,11 +134,13 @@ func doRewriter(id, url string, rwpatterns *[]RewritePattern, isDebug bool) {
 	}
 
 	if rurl == "" {
-		AddResponse(fmt.Sprintf("%s%sOK", id, sep))
+		AddResponse(fmt.Sprintf("%s%sERR", id, sep))
 		if isDebug {
-			log.Printf("[rewrite] %s -> %s", url, "NO MATCH")
+			log.Printf("[rewrite] %s -> %s", url, "NO CHANGE")
 		}
 	} else {
+		// fix '"' in rurl
+		rurl = strings.Replace(rurl, "\"", "%22", -1)
 		AddResponse(fmt.Sprintf("%s%sOK rewrite-url=\"%s\"", id, sep, rurl))
 		if isDebug {
 			log.Printf("[rewrite] %s -> %s", url, rurl)

@@ -2,11 +2,12 @@
 
 This program is for `url_rewrite_program`, and concurrency support.
 
+Require: squid-3.4+
 
-Usage:
+squid config:
 
 ```
 url_rewrite_program /path/to/squid-urlrewrite
-url_rewrite_children 2 startup=2 idle=2 concurrency=10000
+url_rewrite_children 20 startup=1 idle=1 concurrency=10000
 ```
 
