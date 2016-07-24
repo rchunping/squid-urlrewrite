@@ -50,3 +50,14 @@ or
 ```
 squid -k reconfigure
 ```
+
+
+### Test
+```bash
+$ ./squid-urlrewrite
+1 http://webserver.domain.com/file/123/test.png  // <-- input
+1 OK rewrite-url="http://192.168.1.3:1234/backend/file/read?file_id=123" // <-- response
+2 http://github.com
+2 ERR // <-- It's ok, means no rewrite rule matched.
+
+```
