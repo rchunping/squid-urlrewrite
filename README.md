@@ -4,6 +4,13 @@ This program is for `url_rewrite_program`, and concurrency support.
 
 Require: `squid-3.4+`
 
+### Install
+
+
+```
+go get github.com/rchunping/squid-urlrewrite
+```
+
 ### squid config:
 
 ```
