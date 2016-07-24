@@ -61,3 +61,7 @@ $ ./squid-urlrewrite
 2 ERR // <-- It's ok, means no rewrite rule matched.
 
 ```
+
+### About squid redirector
+
+[http://wiki.squid-cache.org/Features/Redirectors](http://wiki.squid-cache.org/Features/Redirectors)
