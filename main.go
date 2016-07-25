@@ -37,6 +37,8 @@ func parseRewritePatterns() (rewritePattern []RewritePattern, isDebug bool) {
 		fp, err := os.Open(f)
 		if err != nil {
 			continue
+		} else {
+			log.Printf("use configure file: %s", f)
 		}
 		defer fp.Close()
 
@@ -152,6 +154,8 @@ func doRewriter(id, url string, rwpatterns *[]RewritePattern, isDebug bool) {
 func StartRewriter() {
 
 	rewritePatterns, isDebug := parseRewritePatterns()
+
+	log.Printf("got %d rewrite rules.", len(rewritePatterns))
 
 	var line string
 	inscanner := bufio.NewScanner(os.Stdin)
