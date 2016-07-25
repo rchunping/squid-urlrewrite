@@ -34,11 +34,16 @@ search in this order:
 # info: default
 # debug: more detail info
 # log messages are write to syslog
-loglevel info
+loglevel debug
 
-# rewrite <regexp> <target>
+# rewrite  <regexp> <target>
+# redirect <regexp> [301;]<target>
 
-rewrite ^https?://webserver.domain.com/file/(\d+)/  http://192.168.1.3:1234/backend/file/read?file_id=$1
+rewrite  ^https?://webserver\.domain\.com/file/(\d+)/  http://192.168.1.3:1234/backend/file/read?file_id=$1
+
+redirect ^(https?://)domain\.com/(.*)$		    301;$1www.domain.com/$2
+
+redirect ^(https?://)www\.domain2\.com/(.*)$	    $1www2.domain2.com/$2   
 
 ```
 
@@ -59,7 +64,8 @@ $ ./squid-urlrewrite
 1 OK rewrite-url="http://192.168.1.3:1234/backend/file/read?file_id=123" // <-- response
 2 http://github.com
 2 ERR // <-- It's ok, means no rewrite rule matched.
-
+3 http://domain.com/index.html
+3 OK status=301 url="http://www.domain.com/index.html" <-- 301 redirect
 ```
 
 ### About squid redirector
