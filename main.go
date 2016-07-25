@@ -26,6 +26,7 @@ var (
 	response_chan      chan string = make(chan string, 1024*10)
 	config_paths       []string
 	signal_hup_chan    chan os.Signal = make(chan os.Signal, 1)
+	stdin_line_chan    chan string    = make(chan string, 100)
 )
 
 func parseRewritePatterns() (rewritePattern []RewritePattern, isDebug bool) {
@@ -158,31 +159,12 @@ func StartRewriter() {
 	log.Printf("got %d rewrite rules.", len(rewritePatterns))
 
 	var line string
-	inscanner := bufio.NewScanner(os.Stdin)
-
-	line_chan := make(chan string, 100)
-	scan_err := make(chan error, 1)
-
-	go func() {
-		for inscanner.Scan() {
-			line_chan <- inscanner.Text()
-		}
-		err := inscanner.Err()
-		scan_err <- err
-	}()
 
 scanloop:
 	for {
 
 		select {
-		case line = <-line_chan:
-		case err := <-scan_err:
-			if err != nil {
-				log.Printf("reading stdin error: %s", err.Error())
-			}
-			log.Printf("exit.")
-			os.Exit(0)
-			break scanloop
+		case line = <-stdin_line_chan:
 		case <-signal_hup_chan:
 			log.Printf("got SIGHUP to reload configure.")
 			break scanloop
@@ -234,6 +216,21 @@ func main() {
 	signal.Notify(signal_hup_chan, syscall.SIGHUP)
 
 	go WriterResponseLines()
+
+	// scan stdin line by line
+	inscanner := bufio.NewScanner(os.Stdin)
+	go func() {
+		for inscanner.Scan() {
+			stdin_line_chan <- inscanner.Text()
+		}
+		err := inscanner.Err()
+		if err != nil {
+			log.Printf("reading stdin error: %s", err.Error())
+			os.Exit(1)
+		}
+		log.Printf("exit.")
+		os.Exit(0)
+	}()
 
 	rewriter_exit_chan <- 1
 	for {
