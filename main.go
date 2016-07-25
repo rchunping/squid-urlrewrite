@@ -15,9 +15,18 @@ import (
 	"strings"
 )
 
+type actionType int
+
+const (
+	REWRITE actionType = iota
+	REDIRECT
+	REDIRECT_301
+)
+
 type RewritePattern struct {
 	Pattern *regexp.Regexp
 	Target  string
+	Type    actionType
 }
 
 var (
@@ -58,6 +67,7 @@ func parseRewritePatterns() (rewritePattern []RewritePattern, isDebug bool) {
 			}
 
 			fs := strings.Fields(line)
+
 			if len(fs) == 2 && fs[0] == "loglevel" {
 				if fs[1] == "debug" {
 					isDebug = true
@@ -65,20 +75,37 @@ func parseRewritePatterns() (rewritePattern []RewritePattern, isDebug bool) {
 				continue
 			}
 
-			if len(fs) != 3 || fs[0] != "rewrite" {
+			if len(fs) != 3 || !(fs[0] == "rewrite" || fs[0] == "redirect") {
 				log.Printf("configure parse error: %s:%d : %s", f, lineno, "format error")
 				os.Exit(1)
 			}
 
+			rp := RewritePattern{}
+
 			if reg, err := regexp.Compile(fs[1]); err == nil {
-				rp := RewritePattern{}
 				rp.Pattern = reg
 				rp.Target = fs[2]
+
+				if fs[0] == "rewrite" {
+					rp.Type = REWRITE
+				} else {
+					rp.Type = REDIRECT
+
+					if len(fs[2]) >= 4 {
+						n := fs[2][0:4]
+						if n == "301;" || n == "302;" {
+							rp.Target = fs[2][4:]
+						}
+						if n == "301;" {
+							rp.Type = REDIRECT_301
+						}
+					}
+				}
 
 				rewritePattern = append(rewritePattern, rp)
 
 			} else {
-				log.Printf("configure *rewrite* parse error: %s:%d : %s", f, lineno, err.Error())
+				log.Printf("configure regexp parse error: %s:%d : %s", f, lineno, err.Error())
 				os.Exit(1)
 			}
 
@@ -121,6 +148,8 @@ func doRewriter(id, url string, rwpatterns *[]RewritePattern, isDebug bool) {
 
 	rurl := ""
 
+	var matched RewritePattern
+
 	for _, rwp := range *rwpatterns {
 		ms := rwp.Pattern.FindStringSubmatch(url)
 
@@ -131,6 +160,7 @@ func doRewriter(id, url string, rwpatterns *[]RewritePattern, isDebug bool) {
 				rurl = strings.Replace(rurl, fmt.Sprintf("$%d", i), s, -1)
 			}
 
+			matched = rwp
 			break
 		}
 
@@ -139,14 +169,27 @@ func doRewriter(id, url string, rwpatterns *[]RewritePattern, isDebug bool) {
 	if rurl == "" {
 		AddResponse(fmt.Sprintf("%s%sERR", id, sep))
 		if isDebug {
-			log.Printf("[rewrite] %s -> %s", url, "NO CHANGE")
+			log.Printf("[nochange] %s -> -", url)
 		}
 	} else {
 		// fix '"' in rurl
 		rurl = strings.Replace(rurl, "\"", "%22", -1)
-		AddResponse(fmt.Sprintf("%s%sOK rewrite-url=\"%s\"", id, sep, rurl))
-		if isDebug {
-			log.Printf("[rewrite] %s -> %s", url, rurl)
+
+		if matched.Type == REWRITE {
+			AddResponse(fmt.Sprintf("%s%sOK rewrite-url=\"%s\"", id, sep, rurl))
+			if isDebug {
+				log.Printf("[rewrite] %s -> %s", url, rurl)
+			}
+		} else {
+			s30X := "302"
+			if matched.Type == REDIRECT_301 {
+				s30X = "301"
+			}
+
+			AddResponse(fmt.Sprintf("%s%sOK status=%s url=\"%s\"", id, sep, s30X, rurl))
+			if isDebug {
+				log.Printf("[redirect] %s -> %s", url, rurl)
+			}
 		}
 	}
 
